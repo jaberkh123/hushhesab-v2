@@ -31,23 +31,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val securityManager = SecurityManager(application)
 
-    // Security & App State
-    val isAppLocked = MutableStateFlow(securityManager.isPinEnabled)
+    // تنظیمات ساده (نسخهٔ ۲: قفل PIN و آنبوردینگ حذف شدند — مطابق PWA)
     val isHideBalance = MutableStateFlow(securityManager.isHideBalance)
-    val isOnboardingDone = MutableStateFlow(securityManager.isOnboardingDone)
     val currencyUnit = MutableStateFlow(securityManager.currencyUnit)
-    val darkModePref = MutableStateFlow(securityManager.darkModePref)
 
     // Data streams
     val accounts: StateFlow<List<AccountEntity>> = repository.allAccounts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     /**
-     * True only when the accounts query has actually emitted and the user has
-     * no accounts — the real "first run" signal for the setup gate. Derived
-     * from the raw Room flow (which has no initial value), so an existing
-     * user's app start never flashes the setup screen while the placeholder
-     * emptyList of [accounts] is still in flight.
+     * نشانهٔ «اولین اجرا بدون حساب» — فقط بعد از اینکه کوئری حساب‌ها واقعاً
+     * نتیجه داد و حسابی وجود ندارد true می‌شود. در صفحهٔ اول برای نمایش
+     * حالت خالی (ساخت اولین حساب) استفاده می‌شود.
      */
     val needsFirstAccount: StateFlow<Boolean> = repository.allAccounts
         .map { it.isEmpty() }
@@ -135,43 +130,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Actions
-    fun unlockApp(pin: String): Boolean {
-        val verified = securityManager.verifyPin(pin)
-        if (verified) {
-            isAppLocked.value = false
-        }
-        return verified
-    }
-
     fun toggleHideBalance() {
         val newVal = !isHideBalance.value
         isHideBalance.value = newVal
         securityManager.isHideBalance = newVal
     }
 
-    fun setPinCode(pin: String) {
-        securityManager.pinCode = pin
-        securityManager.isPinEnabled = pin.isNotEmpty()
-        isAppLocked.value = false
-    }
-
-    fun togglePinEnabled(enabled: Boolean) {
-        securityManager.isPinEnabled = enabled
-    }
-
-    fun completeOnboarding() {
-        securityManager.isOnboardingDone = true
-        isOnboardingDone.value = true
-    }
-
     fun setCurrency(unit: String) {
         currencyUnit.value = unit
         securityManager.currencyUnit = unit
-    }
-
-    fun setDarkMode(mode: String) {
-        darkModePref.value = mode
-        securityManager.darkModePref = mode
     }
 
     fun addTransaction(transaction: TransactionEntity) {

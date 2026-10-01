@@ -53,8 +53,10 @@ fun AccountsScreen(
     var deletingAccount by remember { mutableStateOf<AccountEntity?>(null) }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 title = { Text("مدیریت حساب‌ها و کارت‌ها", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -306,7 +308,7 @@ fun AccountsScreen(
 }
 
 // ----------------------------------------------------
-// 2. Settings & Security Screen
+// 2. Settings Screen (نسخهٔ ۲: بخش قفل PIN حذف شد — مطابق PWA)
 // ----------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -316,15 +318,14 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val isHideBalance by viewModel.isHideBalance.collectAsStateWithLifecycle()
-    val isPinEnabled by remember { derivedStateOf { viewModel.securityManager.isPinEnabled } }
     val currencyUnit by viewModel.currencyUnit.collectAsStateWithLifecycle()
 
-    var showPinDialog by remember { mutableStateOf(false) }
-
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("تنظیمات و امنیت", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                title = { Text("تنظیمات", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
@@ -341,10 +342,10 @@ fun SettingsScreen(
             contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Security Section
+            // Display & Privacy Section
             item {
                 Text(
-                    text = "امنیت و حریم خصوصی",
+                    text = "نمایش و حریم خصوصی",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -356,39 +357,17 @@ fun SettingsScreen(
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Column {
-                        ListItem(
-                            headlineContent = { Text("قفل با رمز ۴ رقمی (PIN)") },
-                            supportingContent = { Text("هنگام باز کردن برنامه رمز عبور درخواست شود") },
-                            leadingContent = { Icon(Icons.Default.Lock, contentDescription = null, tint = EmeraldPrimary) },
-                            trailingContent = {
-                                Switch(
-                                    checked = isPinEnabled,
-                                    onCheckedChange = { checked ->
-                                        if (checked) {
-                                            showPinDialog = true
-                                        } else {
-                                            viewModel.setPinCode("")
-                                        }
-                                    }
-                                )
-                            }
-                        )
-
-                        Divider(modifier = Modifier.padding(horizontal = 16.dp))
-
-                        ListItem(
-                            headlineContent = { Text("مخفی کردن مبالغ در داشبورد") },
-                            supportingContent = { Text("نمایش به صورت •••••••• برای جلوگیری از دیده شدن") },
-                            leadingContent = { Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = IndigoSecondary) },
-                            trailingContent = {
-                                Switch(
-                                    checked = isHideBalance,
-                                    onCheckedChange = { viewModel.toggleHideBalance() }
-                                )
-                            }
-                        )
-                    }
+                    ListItem(
+                        headlineContent = { Text("مخفی کردن مبالغ در داشبورد") },
+                        supportingContent = { Text("نمایش به صورت •••••••• برای جلوگیری از دیده شدن") },
+                        leadingContent = { Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = IndigoSecondary) },
+                        trailingContent = {
+                            Switch(
+                                checked = isHideBalance,
+                                onCheckedChange = { viewModel.toggleHideBalance() }
+                            )
+                        }
+                    )
                 }
             }
 
@@ -459,7 +438,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "نسخه ۱.۱.۰ • توسعه‌یافته با Jetpack Compose",
+                            text = "نسخه ۲.۰ • توسعه‌یافته با Jetpack Compose",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -475,132 +454,4 @@ fun SettingsScreen(
         }
     }
 
-    if (showPinDialog) {
-        var newPin by remember { mutableStateOf("") }
-        Dialog(
-            onDismissRequest = { showPinDialog = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 32.dp),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "تنظیم رمز ۴ رقمی جدید",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "یک رمز ۴ رقمی برای قفل برنامه وارد کنید:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    // PIN Display
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        repeat(4) { index ->
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        if (index < newPin.length) EmeraldPrimary.copy(alpha = 0.15f)
-                                        else MaterialTheme.colorScheme.surfaceVariant
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (index < newPin.length) {
-                                    Text(
-                                        text = "•",
-                                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = EmeraldPrimary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    // Number Pad
-                    val pinRows = listOf(
-                        listOf("1", "2", "3"),
-                        listOf("4", "5", "6"),
-                        listOf("7", "8", "9"),
-                        listOf("DEL", "0", "OK")
-                    )
-                    pinRows.forEach { row ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            row.forEach { key ->
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(52.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable {
-                                            when (key) {
-                                                "DEL" -> {
-                                                    if (newPin.isNotEmpty()) newPin = newPin.dropLast(1)
-                                                }
-                                                "OK" -> {
-                                                    if (newPin.length == 4) {
-                                                        viewModel.setPinCode(newPin)
-                                                        showPinDialog = false
-                                                    }
-                                                }
-                                                else -> {
-                                                    if (newPin.length < 4) newPin += key
-                                                }
-                                            }
-                                        },
-                                    color = when (key) {
-                                        "OK" -> EmeraldPrimary
-                                        "DEL" -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                                        else -> MaterialTheme.colorScheme.surfaceVariant
-                                    },
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        when (key) {
-                                            "DEL" -> Icon(
-                                                Icons.Default.Backspace,
-                                                contentDescription = "پاک کردن",
-                                                tint = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            "OK" -> Text(
-                                                text = "تأیید",
-                                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                                color = Color.White
-                                            )
-                                            else -> Text(
-                                                text = PersianFormatter.toPersianDigits(key),
-                                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    TextButton(onClick = { showPinDialog = false }) {
-                        Text("انصراف")
-                    }
-                }
-            }
-        }
-    }
 }

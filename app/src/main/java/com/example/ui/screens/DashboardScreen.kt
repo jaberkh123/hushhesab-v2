@@ -1,19 +1,18 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
@@ -30,16 +29,19 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core.utils.JalaliCalendarHelper
 import com.example.core.utils.PersianFormatter
-import com.example.data.model.TransactionEntity
 import com.example.data.model.TransactionType
 import com.example.ui.components.AdIconsBanner
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.MainViewModel
 
 /**
- * صفحه اول: کارت «موجودی کل حساب‌ها» + دکمه‌های ثبت هزینه/درآمد +
- * ۴ دکمه: نمایش هزینه‌ها، نمایش درآمدها، حساب‌ها، تنظیمات.
- * (خلاصه مالی ماه، بودجه ماه، نمودارها و گزارش‌ها حذف شدند)
+ * صفحه اول — بازطراحی عیناً مطابق PWA نسخهٔ ۲ (hoosha-hesab-v2):
+ *   ۱) سربرگ: لوگوی طلایی «📊 هوش حساب» + نمایش تاریخ شمسی امروز
+ *   ۲) کارت هیرو: «💰 موجودی کل حساب‌ها» با گرادیان طلایی — کلیک → مدیریت حساب‌ها
+ *   ۳) لیست حساب‌ها (پیش‌نمایش مثل acc-list پنل) + حالت خالی «ساخت اولین حساب»
+ *   ۴) شبکهٔ ۲×۲ دکمه‌ها: نمایش هزینه | نمایش درآمد | حساب‌ها (طلایی) | تنظیمات
+ *   ۵) دکمهٔ بزرگ طلایی «✏️ ثبت هزینه و درآمد»
+ *   ۶) بنر تبلیغات «پیشنهاد ما» + پانوشت
  */
 @Composable
 fun DashboardScreen(
@@ -52,247 +54,277 @@ fun DashboardScreen(
     val totalBalance by viewModel.totalBalance.collectAsStateWithLifecycle()
     val isHideBalance by viewModel.isHideBalance.collectAsStateWithLifecycle()
     val currencyUnit by viewModel.currencyUnit.collectAsStateWithLifecycle()
+    val accounts by viewModel.accounts.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 14.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Top Header: Hide Balance toggle
+        // ۱) سربرگ — لوگوی طلایی + تاریخ امروز (مثل header پنل)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = { viewModel.toggleHideBalance() },
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .testTag("toggle_hide_balance_btn")
-                ) {
-                    Icon(
-                        imageVector = if (isHideBalance) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = "مخفی کردن موجودی",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        // 2. Total Balance Hero Card — کلیک روی کارت → مدیریت حساب‌ها
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable { onNavigateToAccounts() }
-                    .testTag("total_balance_card"),
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(Color(0xFF065F46), Color(0xFF047857), Color(0xFF0F172A))
-                            )
+                Text(
+                    text = "📊 هوش حساب",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Black,
+                        fontSize = 26.sp,
+                        brush = Brush.linearGradient(
+                            colors = listOf(GoldGradientStart, GoldGradientEnd)
                         )
-                        .padding(20.dp)
-                ) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "موجودی کل حساب‌ها",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFFA7F3D0)
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.ChevronLeft,
-                                    contentDescription = "مدیریت حساب‌ها",
-                                    tint = Color(0xFFA7F3D0),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color.White.copy(alpha = 0.15f)
-                            ) {
-                                Text(
-                                    text = JalaliCalendarHelper.getCurrentPersianMonthName(),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
+                    ),
+                    modifier = Modifier.testTag("app_logo")
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // تاریخ شمسی امروز — مثل date-display پنل
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = CardBgSoft,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
+                    ) {
                         Text(
-                            text = PersianFormatter.formatMoney(totalBalance, currencyUnit, isHideBalance),
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color.White,
-                                fontSize = 26.sp
-                            )
+                            text = JalaliCalendarHelper.formatJalaliDate(System.currentTimeMillis()),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextPrimary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                         )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Quick action pills inside Hero
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            FilledTonalButton(
-                                onClick = { onQuickAddClick(TransactionType.EXPENSE) },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp.scaledDp())
-                                    .testTag("quick_expense_btn"),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = Color(0xFFEF4444).copy(alpha = 0.35f),
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(Icons.Default.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFFEF4444))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("ثبت هزینه", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp))
-                                }
-                            }
-
-                            FilledTonalButton(
-                                onClick = { onQuickAddClick(TransactionType.INCOME) },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp.scaledDp())
-                                    .testTag("quick_income_btn"),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = Color(0xFF3B82F6).copy(alpha = 0.35f),
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(Icons.Default.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color(0xFF60A5FA))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("ثبت درآمد", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp))
-                                }
-                            }
-                        }
+                    }
+                    IconButton(
+                        onClick = { viewModel.toggleHideBalance() },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CardBgSoft)
+                            .border(1.dp, CardBorder, RoundedCornerShape(10.dp))
+                            .testTag("toggle_hide_balance_btn")
+                    ) {
+                        Icon(
+                            imageVector = if (isHideBalance) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                            contentDescription = "مخفی کردن موجودی",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
         }
 
-        // 3. Quick Navigation: نمایش هزینه‌ها | نمایش درآمدها
+        // ۲) کارت هیرو — موجودی کل حساب‌ها (گرادیان طلایی مثل hero-card پنل)
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        Brush.linearGradient(colors = listOf(HeroBgStart, HeroBgEnd))
+                    )
+                    .border(1.dp, HeroBorder, RoundedCornerShape(18.dp))
+                    .clickable { onNavigateToAccounts() }
+                    .testTag("total_balance_card")
+                    .padding(vertical = 22.dp, horizontal = 16.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "💰 موجودی کل حساب‌ها",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextHeader
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = PersianFormatter.formatMoney(totalBalance, currencyUnit, isHideBalance),
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = GoldPrimary,
+                            fontSize = 30.sp
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (accounts.isEmpty()) "هنوز حسابی نساخته‌اید"
+                        else "${PersianFormatter.toPersianDigits(accounts.size.toString())} حساب فعال • برای مدیریت بزنید",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextMuted
+                    )
+                }
+            }
+        }
+
+        // ۳) پیش‌نمایش حساب‌ها — مثل acc-list پنل (نام + موجودی آبی)
+        if (accounts.isNotEmpty()) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CardBg.copy(alpha = 0.4f))
+                        .border(1.dp, CardBorder, RoundedCornerShape(16.dp))
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    accounts.take(4).forEach { acc ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(9.dp))
+                                .background(Color.White.copy(alpha = 0.04f))
+                                .padding(horizontal = 12.dp, vertical = 9.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(text = acc.icon, fontSize = 18.sp)
+                                Text(
+                                    text = acc.name,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                            Text(
+                                text = PersianFormatter.formatMoney(acc.balance, currencyUnit, isHideBalance),
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = AccountBalanceBlue
+                                )
+                            )
+                        }
+                    }
+                    if (accounts.size > 4) {
+                        Text(
+                            text = "و ${PersianFormatter.toPersianDigits((accounts.size - 4).toString())} حساب دیگر…",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextMuted,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // ۴) شبکهٔ ۲×۲ دکمه‌ها — مثل nav-grid پنل
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                OutlinedButton(
+                NavGridButton(
+                    text = "📉 نمایش هزینه",
                     onClick = { onNavigateToTransactionsWithType(TransactionType.EXPENSE) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp.scaledDp())
-                        .testTag("nav_expenses_btn"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ExpenseRed),
-                    border = ButtonDefaults.outlinedButtonBorder(enabled = true)
-                ) {
-                    Icon(Icons.Default.TrendingDown, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("نمایش هزینه‌ها", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
-                }
-
-                OutlinedButton(
+                    modifier = Modifier.weight(1f).testTag("nav_expenses_btn")
+                )
+                NavGridButton(
+                    text = "📈 نمایش درآمد",
                     onClick = { onNavigateToTransactionsWithType(TransactionType.INCOME) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp.scaledDp())
-                        .testTag("nav_incomes_btn"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = IncomeGreen),
-                    border = ButtonDefaults.outlinedButtonBorder(enabled = true)
-                ) {
-                    Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("نمایش درآمدها", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
-                }
+                    modifier = Modifier.weight(1f).testTag("nav_incomes_btn")
+                )
             }
         }
-
-        // 4. Quick Navigation: حساب‌ها | تنظیمات
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                OutlinedButton(
-                    onClick = { onNavigateToAccounts() },
+                // دکمهٔ طلایی حساب‌ها — مثل nav-btn.gold پنل
+                Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp.scaledDp())
+                        .height(50.dp.scaledDp())
+                        .clip(RoundedCornerShape(13.dp))
+                        .background(Brush.linearGradient(colors = listOf(GoldGradientStart, GoldGradientEnd)))
+                        .clickable { onNavigateToAccounts() }
                         .testTag("nav_accounts_btn"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TransferBlue),
-                    border = ButtonDefaults.outlinedButtonBorder(enabled = true)
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("حساب‌ها", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        text = "💳 حساب‌ها",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = GoldOnDark
+                        )
+                    )
                 }
-
-                OutlinedButton(
+                NavGridButton(
+                    text = "⚙️ تنظیمات",
                     onClick = { onNavigateToSettings() },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp.scaledDp())
-                        .testTag("nav_settings_btn"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF64748B)),
-                    border = ButtonDefaults.outlinedButtonBorder(enabled = true)
-                ) {
-                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("تنظیمات", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
-                }
+                    modifier = Modifier.weight(1f).testTag("nav_settings_btn")
+                )
             }
         }
 
-        // 5. بنر تبلیغات «پیشنهاد ما» (سرور شخصی) — پایین صفحه اول؛
-        //    در حالت لودینگ/خطا/بدون اینترنت خودش مخفی می‌شود و هیچ فضایی نمی‌گیرد.
+        // ۵) دکمهٔ بزرگ طلایی ثبت هزینه و درآمد — مثل btn-submit پنل
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp.scaledDp())
+                    .clip(RoundedCornerShape(13.dp))
+                    .background(Brush.linearGradient(colors = listOf(GoldGradientStart, GoldGradientEnd)))
+                    .clickable { onQuickAddClick(TransactionType.EXPENSE) }
+                    .testTag("quick_add_btn"),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "✏️ ثبت هزینه و درآمد",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = GoldOnDark
+                    )
+                )
+            }
+        }
+
+        // ۶) بنر تبلیغات «پیشنهاد ما» (سرور شخصی) — در حالت لودینگ/خطا مخفی می‌شود
         item {
             AdIconsBanner(modifier = Modifier.fillMaxWidth())
         }
+
+        // ۷) پانوشت — مثل footer پنل
+        item {
+            Text(
+                text = "اطلاعات به‌صورت خودکار و آفلاین روی همین گوشی ذخیره می‌شود",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF71717F),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
+    }
+}
+
+/** دکمهٔ معمولی شبکهٔ ۲×۲ — پس‌زمینهٔ سفید نیمه‌شفاف با حاشیه (nav-btn پنل). */
+@Composable
+private fun NavGridButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .height(50.dp.scaledDp())
+            .clip(RoundedCornerShape(13.dp))
+            .background(CardBgSoft)
+            .border(1.dp, CardBorderStrong, RoundedCornerShape(13.dp))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        )
     }
 }
 
 @Composable
 fun TransactionItemRow(
-    transaction: TransactionEntity,
+    transaction: com.example.data.model.TransactionEntity,
     isHideBalance: Boolean,
     currencyUnit: String,
     accountName: String? = null,
@@ -308,8 +340,11 @@ fun TransactionItemRow(
             .clickable { onClick() }
             .testTag("transaction_item_${transaction.id}"),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = CardBg.copy(alpha = 0.55f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -326,12 +361,12 @@ fun TransactionItemRow(
                 Box(
                     modifier = Modifier
                         .size(46.dp)
-                        .clip(CircleShape)
+                        .clip(RoundedCornerShape(50))
                         .background(
                             when {
-                                isExpense -> ExpenseRed.copy(alpha = 0.12f)
-                                isIncome -> IncomeGreen.copy(alpha = 0.12f)
-                                else -> TransferBlue.copy(alpha = 0.12f)
+                                isExpense -> ExpenseRed.copy(alpha = 0.14f)
+                                isIncome -> IncomeGreen.copy(alpha = 0.14f)
+                                else -> TransferBlue.copy(alpha = 0.14f)
                             }
                         ),
                     contentAlignment = Alignment.Center
@@ -346,18 +381,18 @@ fun TransactionItemRow(
                     Text(
                         text = if (transaction.note.isNotBlank()) transaction.note else transaction.categoryName,
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = TextPrimary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "${transaction.categoryName} • ${accountName ?: "بدون حساب"} • ${JalaliCalendarHelper.formatRelativeOrDate(transaction.dateTimestamp)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = TextMuted
                     )
                 }
             }
 
-            // Amount
+            // Amount — رنگ‌های دقیق PWA: هزینه قرمز، درآمد سبز
             Column(horizontalAlignment = Alignment.End) {
                 val prefix = when {
                     isExpense -> "-"

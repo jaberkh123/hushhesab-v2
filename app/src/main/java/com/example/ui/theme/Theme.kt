@@ -8,59 +8,51 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
+/**
+ * تم «هوش حساب نسخه ۲» — همیشه تیره، عیناً مطابق PWA نسخه ۲.
+ * مثل PWA دو حالت روشن/تیره وجود ندارد؛ اپ همیشه روی پس‌زمینهٔ
+ * بنفش تیره با لهجهٔ طلایی رندر می‌شود.
+ */
+
 private val DarkColorScheme = darkColorScheme(
-    primary = EmeraldLight,
-    onPrimary = Color(0xFF022C22),
+    primary = GoldPrimary,
+    onPrimary = GoldOnDark,
     primaryContainer = EmeraldContainerDark,
-    onPrimaryContainer = Color(0xFFA7F3D0),
+    onPrimaryContainer = GoldPrimary,
     secondary = IndigoLight,
-    onSecondary = Color(0xFF1E1B4B),
-    secondaryContainer = Color(0xFF312E81),
-    onSecondaryContainer = Color(0xFFC7D2FE),
+    onSecondary = GoldOnDark,
+    secondaryContainer = Color(0xFF3D3D80),
+    onSecondaryContainer = Color(0xFFD5D5FF),
     tertiary = AmberAccent,
-    onTertiary = Color(0xFF451A03),
+    onTertiary = GoldOnDark,
     background = BackgroundDark,
-    onBackground = OnSurfaceDark,
+    onBackground = TextPrimary,
     surface = SurfaceDark,
-    onSurface = OnSurfaceDark,
+    onSurface = TextPrimary,
     surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = OnSurfaceVariantDark,
-    error = ExpenseRed
+    onSurfaceVariant = TextMuted,
+    surfaceContainer = SurfaceDark,
+    surfaceContainerHigh = SurfaceVariantDark,
+    surfaceContainerHighest = SurfaceVariantDark,
+    outline = CardBorderStrong,
+    outlineVariant = CardBorder,
+    error = ExpenseRed,
+    onError = Color(0xFF1B1735)
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = EmeraldPrimary,
-    onPrimary = Color.White,
-    primaryContainer = EmeraldContainerLight,
-    onPrimaryContainer = EmeraldDark,
-    secondary = IndigoSecondary,
-    onSecondary = Color.White,
-    secondaryContainer = IndigoContainerLight,
-    onSecondaryContainer = IndigoDark,
-    tertiary = AmberAccent,
-    onTertiary = Color.White,
-    background = BackgroundLight,
-    onBackground = OnSurfaceLight,
-    surface = SurfaceLight,
-    onSurface = OnSurfaceLight,
-    surfaceVariant = SurfaceVariantLight,
-    onSurfaceVariant = OnSurfaceVariantLight,
-    error = ExpenseRed
-)
+// سازگاری کامپایل — هرگز استفادهٔ واقعی نمی‌شود (اپ همیشه تیره است)
+private val LightColorScheme = DarkColorScheme
 
 @Composable
 fun KharjYarTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
     CompositionLocalProvider(LocalUiScale provides rememberUiScale()) {
         MaterialTheme(
-            colorScheme = colorScheme,
+            colorScheme = DarkColorScheme,
             typography = Typography,
             content = content
         )
     }
 }
-

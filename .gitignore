@@ -23,3 +23,4 @@ release-key.jks
 google-services.json
 *.apk
 .freebuff/
+.env.local

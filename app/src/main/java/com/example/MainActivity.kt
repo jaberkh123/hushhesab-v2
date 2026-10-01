@@ -9,10 +9,13 @@ import androidx.activity.viewModels
 import androidx.fragment.app.FragmentActivity
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +26,9 @@ import com.example.data.AdManager
 import com.example.data.AdiveryAds
 import com.example.data.model.TransactionType
 import com.example.ui.screens.*
+import com.example.ui.theme.BgDeep1
+import com.example.ui.theme.BgDeep2
+import com.example.ui.theme.BgDeep3
 import com.example.ui.theme.KharjYarTheme
 import com.example.ui.viewmodel.MainViewModel
 
@@ -87,12 +93,9 @@ class MainActivity : FragmentActivity() {
 
 @Composable
 fun KharjYarApp(viewModel: MainViewModel) {
-    val isOnboardingDone by viewModel.isOnboardingDone.collectAsStateWithLifecycle()
-    val isAppLocked by viewModel.isAppLocked.collectAsStateWithLifecycle()
-
-    // True only after the accounts query has really emitted (never on the
-    // StateFlow's placeholder emptyList) AND the user has no accounts yet.
-    val needsFirstAccount by viewModel.needsFirstAccount.collectAsStateWithLifecycle()
+    // نسخهٔ ۲: آنبوردینگ، قفل PIN و صفحهٔ اجباری «ساخت اولین حساب» حذف شدند —
+    // اپ مستقیم روی صفحهٔ اول باز می‌شود (مطابق PWA)؛ اگر حسابی نباشد،
+    // همان‌جا دکمهٔ بزرگ «ساخت اولین حساب» دیده می‌شود.
 
     var currentView by remember { mutableStateOf(AppView.HOME) }
     var showAddTransactionSheet by remember { mutableStateOf(false) }
@@ -100,29 +103,8 @@ fun KharjYarApp(viewModel: MainViewModel) {
     var showExitDialog by remember { mutableStateOf(false) }
     val activity = LocalContext.current as? Activity
 
-    when {
-        !isOnboardingDone -> {
-            OnboardingScreen(
-                onFinish = { viewModel.completeOnboarding() }
-            )
-        }
-
-        isAppLocked -> {
-            LockScreen(
-                onUnlockSuccess = { viewModel.isAppLocked.value = false },
-                onVerifyPin = { pin -> viewModel.unlockApp(pin) }
-            )
-        }
-
-        // First-run gate: without an account the user cannot record any
-        // expense/income/transfer, so force creating one before entering.
-        needsFirstAccount -> {
-            FirstAccountSetupScreen(viewModel = viewModel)
-        }
-
-        else -> {
-            // ── Back Press: sheet → back to home → exit confirmation ──
-            BackHandler {
+    // ── Back Press: sheet → back to home → exit confirmation ──
+    BackHandler {
                 when {
                     showAddTransactionSheet -> showAddTransactionSheet = false
                     currentView != AppView.HOME -> {
@@ -161,11 +143,19 @@ fun KharjYarApp(viewModel: MainViewModel) {
             }
 
             Scaffold(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                containerColor = Color.Transparent
             ) { innerPadding ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(
+                            // پس‌زمینهٔ گرادیان بنفش — عیناً مثل body پنل PWA
+                            // (linear-gradient(135deg,#0f0c29,#302b63,#24243e))
+                            Brush.linearGradient(
+                                colors = listOf(BgDeep1, BgDeep2, BgDeep3)
+                            )
+                        )
                         .padding(innerPadding)
                 ) {
                     when (currentView) {
@@ -234,6 +224,4 @@ fun KharjYarApp(viewModel: MainViewModel) {
                     }
                 )
             }
-        }
-    }
 }
