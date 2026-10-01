@@ -1,0 +1,91 @@
+name: Build Release APK (HoushHesab)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      KEYSTORE_PATH: ${{ github.workspace }}/salari.jks
+      STORE_PASSWORD: '%*%(5859963@JAber'
+      KEY_ALIAS: salarim
+      KEY_PASSWORD: '%*%(5859963@JAber'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Read app version
+        id: ver
+        run: |
+          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Release version: v$VERSION"
+
+      - name: Build signed release APK
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Verify APK signature
+        run: |
+          BT=$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)
+          "$BT/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
+
+      - name: Verify ad code inside APK (prove the fixes are in the dex)
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          BAZAAR=$(unzip -p $APK classes*.dex | strings | grep -c 'bazaar://details?id=' || true)
+          SLUG=$(unzip -p $APK classes*.dex | strings | grep -c 'hushhesab' || true)
+          VIAAPP=$(unzip -p $APK classes*.dex | strings | grep -c 'via=app' || true)
+          BAZAARPKG=$(unzip -p $APK classes*.dex | strings | grep -c 'com.farsitel.bazaar' || true)
+          AOPEN=$(unzip -p $APK classes*.dex | strings | grep -c 'ad13951b-5324-4c0d-bb72-7eb8eea4efc7' || true)
+          AINT=$(unzip -p $APK classes*.dex | strings | grep -c '57d65a1f-b8de-4fa3-af4e-2f8c263461d7' || true)
+          echo "bazaar deeplink: $BAZAAR | slug: $SLUG | via=app: $VIAAPP | bazaar pkg: $BAZAARPKG | adivery appopen: $AOPEN | adivery interstitial: $AINT"
+          if [ "$BAZAAR" -eq 0 ] || [ "$SLUG" -eq 0 ] || [ "$VIAAPP" -eq 0 ] || [ "$BAZAARPKG" -eq 0 ] || [ "$AOPEN" -eq 0 ] || [ "$AINT" -eq 0 ]; then
+            echo "Ad fixes missing from APK!"; exit 1
+          fi
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/HoushHesab-v${{ steps.ver.outputs.version }}-release.apk"
+          ls -la dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: houshhesab-apk
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: هوش حساب v${{ steps.ver.outputs.version }}
+          body: |
+            هوش حساب v${{ steps.ver.outputs.version }} (بیلد #${{ github.run_number }})
+
+            - تبلیغات «من» (شبکهٔ تبلیغ): باز شدن مستقیم کافه‌بازار با bazaar://details?id=<package_name> و setPackage — بدون مرورگر و انتخابگر برنامه؛ فال‌بک صفحهٔ وب بازار؛ ثبت آمار کلیک با via=app
+            - مقصد کلیک طبق سرور: destination=bazaar → اپ بازار، destination=web → مرورگر
+            - ادیوری: بازگشت به برنامه فقط هنگام ورود واقعی از بیرون اپ (بک‌گراند) و به‌صورت یک‌درمیان نمایش داده می‌شود؛ میان‌صفحه‌ای هر ۲۰ کلیک
+          files: dist/*.apk
+          fail_on_unmatched_files: true

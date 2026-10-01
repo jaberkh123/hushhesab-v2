@@ -1,0 +1,6 @@
+{
+  "name": "خرج‌یار",
+  "description": "اپلیکیشن مدیریت هوشمند درآمد، هزینه، بودجه و پس‌انداز شخصی",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
